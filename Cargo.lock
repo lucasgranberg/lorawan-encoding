@@ -3,9 +3,21 @@
 version = 4
 
 [[package]]
+name = "bitfield-struct"
+version = "0.10.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2be5a46ba01b60005ae2c51a36a29cfe134bcacae2dd5cedcd4615fbaad1494b"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "lorawan-encoding"
 version = "0.1.0"
 dependencies = [
+ "bitfield-struct",
  "zerocopy",
 ]
 
