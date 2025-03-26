@@ -4,12 +4,12 @@ use crate::types::{DevEui, DevNonce, JoinEui};
 
 #[derive(IntoBytes, KnownLayout, Immutable)]
 #[repr(u8)]
-pub enum MHDR {
+pub enum JoinRequestHeader {
     JoinRequest = 0b00000000,
 }
 #[derive(IntoBytes, KnownLayout, Immutable)]
 pub struct JoinRequest {
-    _mhdr: MHDR,
+    _mhdr: JoinRequestHeader,
     pub join_eui: JoinEui,
     pub dev_eui: DevEui,
     pub dev_nonce: DevNonce,
@@ -18,13 +18,14 @@ pub struct JoinRequest {
 impl JoinRequest {
     pub fn new(join_eui: JoinEui, dev_eui: DevEui, dev_nonce: DevNonce) -> Self {
         Self {
-            _mhdr: MHDR::JoinRequest,
+            _mhdr: JoinRequestHeader::JoinRequest,
             join_eui,
             dev_eui,
             dev_nonce,
         }
     }
 }
+
 #[cfg(test)]
 mod tests {
     use zerocopy::FromBytes;

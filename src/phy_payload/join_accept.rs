@@ -3,14 +3,14 @@ use zerocopy::{FromBytes, Immutable, IntoBytes, KnownLayout, TryFromBytes, Unali
 
 #[derive(TryFromBytes, IntoBytes, KnownLayout, Immutable, Unaligned)]
 #[repr(u8)]
-pub enum MHDR {
+pub enum JoinAcceptHeader {
     JoinAccept = 0b00100000,
 }
 
 #[derive(TryFromBytes, KnownLayout, Immutable)]
 #[repr(C)]
 pub struct JoinAccept {
-    mhdr: MHDR,
+    mhdr: JoinAcceptHeader,
     join_nonce: [u8; 3],
     net_id: [u8; 3],
     dev_addr: [u8; 4],
