@@ -23,6 +23,7 @@ pub enum UplinkMacCommmand {
     DIChannelAns(DIChannelAns) = DI_CHANNEL_CID,
     DeviceTimeReq(DeviceTimeReq) = DEVICE_TIME_CID,
 }
+#[allow(clippy::len_without_is_empty)]
 impl UplinkMacCommmand {
     pub fn len(&self) -> usize {
         match self {

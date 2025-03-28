@@ -37,7 +37,7 @@ impl super::Mac for SoftMac {
     fn calculate_mic(&mut self, data: &[&[u8]]) -> MIC {
         let mac = &mut self.inner;
         for row in data {
-            mac.update(*row);
+            mac.update(row);
         }
         let result = mac.finalize_reset().into_bytes();
         MIC::read_from_bytes(&result.as_slice()[..4]).unwrap()

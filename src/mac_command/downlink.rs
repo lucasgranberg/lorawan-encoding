@@ -22,6 +22,7 @@ pub enum DownlinkMacCommand {
     DeviceTimeAns(DeviceTimeAns) = DEVICE_TIME_CID,
 }
 impl DownlinkMacCommand {
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         match self {
             DownlinkMacCommand::LinkCheckAns(cmd) => size_of_val(cmd),
@@ -184,7 +185,7 @@ impl<'a> DownlinkMacCommandDecoder<'a> {
         Self { buf }
     }
 }
-impl<'a> Iterator for DownlinkMacCommandDecoder<'a> {
+impl Iterator for DownlinkMacCommandDecoder<'_> {
     type Item = DownlinkMacCommand;
 
     fn next(&mut self) -> Option<Self::Item> {

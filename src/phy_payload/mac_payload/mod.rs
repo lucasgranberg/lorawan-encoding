@@ -1,5 +1,3 @@
-use std::usize;
-
 use bitfield_struct::bitfield;
 use zerocopy::{
     little_endian::U16, FromBytes, Immutable, IntoBytes, KnownLayout, TryFromBytes, Unaligned,
@@ -57,9 +55,6 @@ impl FHDR {
             f_cnt: f_cnt.into(),
             f_opts: f_opts_buf,
         })
-    }
-    pub fn len(&self) -> usize {
-        7 + self.f_ctrl.f_opts_len()
     }
     pub fn dev_addr(&self) -> DevAddr {
         self.dev_addr
@@ -126,7 +121,8 @@ where
     pub fn new(buf: &mut [u8], confirmed: bool, fhdr: FHDR) -> &mut Self {
         let mhdr = MHDR::new(confirmed);
         buf[0] = mhdr.as_bytes()[0];
-        buf[1..1 + fhdr.len()].copy_from_slice(&fhdr.as_bytes()[..fhdr.len()]);
+        let fhdr_len = 7 + fhdr.f_ctrl.f_opts_len();
+        buf[1..1 + fhdr_len].copy_from_slice(&fhdr.as_bytes()[..fhdr_len]);
         let uplink = Self::try_mut_from_bytes(buf).unwrap();
         uplink
     }
