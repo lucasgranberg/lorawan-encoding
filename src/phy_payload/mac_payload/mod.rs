@@ -16,11 +16,11 @@ pub mod uplink;
 #[derive(FromBytes, IntoBytes, KnownLayout, Immutable, Unaligned)]
 pub struct FCtrl {
     #[bits(4)]
-    f_opts_len: usize,
-    f_pending: bool,
-    ack: bool,
+    pub f_opts_len: usize,
+    pub f_pending: bool,
+    pub ack: bool,
     _rfu: bool,
-    adr: bool,
+    pub adr: bool,
 }
 
 #[derive(FromBytes, IntoBytes, Immutable, Unaligned)]
@@ -91,9 +91,6 @@ impl FRMPayload {
         let payload_len = res.len();
         Self::mut_from_bytes(&mut buf[..1 + payload_len]).unwrap()
     }
-    // pub fn len(&self) -> usize {
-    //     1 + self.data.len()
-    // }
 }
 
 pub trait Mhdr: IntoBytes + Immutable + TryFromBytes {
@@ -118,6 +115,12 @@ impl<MHDR> MacPayload<MHDR>
 where
     MHDR: Mhdr,
 {
+    pub fn f_ctrl(&self) -> FCtrl {
+        self.f_ctrl
+    }
+    pub fn f_cnt(&self) -> u16 {
+        self.f_cnt.get()
+    }
     pub fn new(buf: &mut [u8], confirmed: bool, fhdr: FHDR) -> &mut Self {
         let mhdr = MHDR::new(confirmed);
         buf[0] = mhdr.as_bytes()[0];
@@ -125,6 +128,20 @@ where
         buf[1..1 + fhdr_len].copy_from_slice(&fhdr.as_bytes()[..fhdr_len]);
         let uplink = Self::try_mut_from_bytes(buf).unwrap();
         uplink
+    }
+
+    pub fn new_from_encrypted<'a, C: Crypto>(
+        buf: &'a mut [u8],
+        f_cnt: u32,
+        crypto: &mut C,
+    ) -> Result<&'a mut Self, Error> {
+        let mac_payload = Self::try_mut_from_bytes(buf).map_err(|_| Error::Payload)?;
+        if !mac_payload.validate_mic(crypto, 0x12AFF, mac_payload.as_bytes().len()) {
+            return Err(Error::MIC);
+        }
+        //use encrypt to decrypt
+        mac_payload.encrypt(crypto, f_cnt, mac_payload.data.len() - 4);
+        Ok(mac_payload)
     }
     pub fn frm_payload(&self) -> &FRMPayload {
         FRMPayload::ref_from_bytes(&self.data[self.f_ctrl.f_opts_len()..]).unwrap()
@@ -146,7 +163,10 @@ where
         let mut mac = crypto.get_mac();
         mac.calculate_mic(&[&header, &self.as_bytes()[..total_len - 4]])
     }
-    fn encrypt<C: Crypto>(&mut self, crypto: &mut C, f_cnt: u32, payload_len: usize) {
+    pub fn validate_mic<C: Crypto>(&self, crypto: &mut C, f_cnt: u32, total_len: usize) -> bool {
+        self.mic() == self.calculate_mic(crypto, f_cnt, total_len)
+    }
+    pub fn encrypt<C: Crypto>(&mut self, crypto: &mut C, f_cnt: u32, payload_len: usize) {
         let mut block = [0u8; 16];
         block[0] = 0x01;
         block[5] = MHDR::dir(); //Dir

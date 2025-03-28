@@ -1,6 +1,6 @@
 use zerocopy::{Immutable, IntoBytes, KnownLayout, TryFromBytes, Unaligned};
 
-use crate::{crypto::Crypto, mac_command::downlink::DownlinkMacCommandDecoder, Error};
+use crate::mac_command::downlink::DownlinkMacCommandDecoder;
 
 use super::{MacPayload, Mhdr};
 
@@ -26,19 +26,6 @@ impl Mhdr for DownlinkHeader {
 pub type Downlink = MacPayload<DownlinkHeader>;
 
 impl Downlink {
-    pub fn new_from_encrypted<'a, C: Crypto>(
-        buf: &'a mut [u8],
-        f_cnt: u32,
-        crypto: &mut C,
-    ) -> Result<&'a mut Downlink, Error> {
-        let downlink = Self::try_mut_from_bytes(buf).map_err(|_| Error::Payload)?;
-        if downlink.mic() != downlink.calculate_mic(crypto, 0x12AFF, downlink.as_bytes().len()) {
-            return Err(Error::MIC);
-        }
-        downlink.encrypt(crypto, f_cnt, downlink.data.len() - 4);
-        Ok(downlink)
-    }
-
     pub fn confirmed(&self) -> bool {
         match self.mhdr {
             DownlinkHeader::Unconfirmed => false,

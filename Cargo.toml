@@ -16,3 +16,10 @@ soft-crypto = ["dep:aes", "dep:cmac"]
 [dev-dependencies]
 aes = { version = "0.8" }
 cmac = { version = "0.7" }
+criterion = "0"
+trallocator = "0.2.1"
+heapless = "0.8"
+
+[[bench]]
+name = "lorawan-encoding"
+harness = false
