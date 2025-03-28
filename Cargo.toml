@@ -5,4 +5,14 @@ edition = "2021"
 
 [dependencies]
 bitfield-struct = "0.10.1"
-zerocopy = { version = "0.8.17", features = ["derive"] }
+zerocopy = { version = "0.8.24", features = ["derive"] }
+aes = { version = "0.8", optional = true }
+cmac = { version = "0.7", optional = true }
+
+[features]
+default = ["soft-crypto"]
+soft-crypto = ["dep:aes", "dep:cmac"]
+
+[dev-dependencies]
+aes = { version = "0.8" }
+cmac = { version = "0.7" }

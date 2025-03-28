@@ -1,6 +1,6 @@
 #![allow(non_camel_case_types)]
 use bitfield_struct::bitfield;
-use zerocopy::{Immutable, IntoBytes, KnownLayout, Unaligned};
+use zerocopy::{Immutable, IntoBytes, KnownLayout};
 
 use crate::Error;
 
@@ -9,7 +9,7 @@ use super::{
     NEW_CHANNEL_CID, RX_PARAM_SETUP_CID, RX_TIMING_SETUP_CID, TX_PARAM_SETUP_CID,
 };
 
-#[derive(IntoBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(IntoBytes, Immutable, KnownLayout)]
 #[repr(u8)]
 pub enum UplinkMacCommmand {
     LinkCheckReq(LinkCheckReq) = LINK_CHECK_CID,
@@ -46,7 +46,7 @@ impl UplinkMacCommmand {
     }
 }
 
-#[derive(Default, IntoBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(Default, IntoBytes, Immutable, KnownLayout)]
 #[repr(C)]
 pub struct LinkCheckReq {
     _padding: [u8; 2],
@@ -59,7 +59,7 @@ impl LinkCheckReq {
     }
 }
 
-#[derive(Default, IntoBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(Default, IntoBytes, Immutable, KnownLayout)]
 #[repr(C)]
 pub struct LinkADRAns {
     pub status: LinkAdrAnsStatus,
@@ -75,116 +75,118 @@ impl LinkADRAns {
 }
 
 #[bitfield(u8)]
-#[derive(IntoBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(IntoBytes, Immutable, KnownLayout)]
 pub struct LinkAdrAnsStatus {
+    pub channel_mask_ack: bool,
+    pub data_rate_ack: bool,
+    pub power_ack: bool,
     #[bits(5)]
     _rfu: u8,
-    power_ack: bool,
-    data_rate_ack: bool,
-    channel_mask_ack: bool,
 }
 
-#[derive(IntoBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(IntoBytes, Immutable, KnownLayout)]
 #[repr(C)]
 pub struct DutyCycleAns {
     _padding: [u8; 2],
 }
-#[derive(IntoBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(IntoBytes, Immutable, KnownLayout)]
 #[repr(C)]
 pub struct RXParamSetupAns {
     status: RXParamSetupAnsStatus,
     _padding: [u8; 1],
 }
 #[bitfield(u8)]
-#[derive(IntoBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(IntoBytes, Immutable, KnownLayout)]
 pub struct RXParamSetupAnsStatus {
-    channel_ack: bool,
-    rx2_data_rate_ack: bool,
-    rx1_data_rate_offset_ack: bool,
+    pub channel_ack: bool,
+    pub rx2_data_rate_ack: bool,
+    pub rx1_data_rate_offset_ack: bool,
     #[bits(5)]
     _rfu: u8,
 }
 
-#[derive(IntoBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(IntoBytes, Immutable, KnownLayout)]
 #[repr(C)]
 pub struct DevStatusAns {
     radio_status: u8,
     battery: u8,
     _padding: [u8; 0],
 }
-#[derive(IntoBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(IntoBytes, Immutable, KnownLayout)]
 #[repr(C)]
 pub struct NewChannelAns {
     status: NewChannelAnsStatus,
     _padding: [u8; 1],
 }
 #[bitfield(u8)]
-#[derive(IntoBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(IntoBytes, Immutable, KnownLayout)]
 pub struct NewChannelAnsStatus {
-    channel_freq_ok: bool,
-    data_rate_range_ok: bool,
+    pub channel_freq_ok: bool,
+    pub data_rate_range_ok: bool,
     #[bits(6)]
     _rfu: u8,
 }
 
-#[derive(IntoBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(IntoBytes, Immutable, KnownLayout)]
 #[repr(C)]
 pub struct RXTimingSetupAns {
     rx_timings_settings: RxTimingsSetting,
     _padding: [u8; 1],
 }
 #[bitfield(u8)]
-#[derive(IntoBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(IntoBytes, Immutable, KnownLayout)]
 pub struct RxTimingsSetting {
     #[bits(3)]
-    del: u8,
+    pub del: u8,
     #[bits(5)]
     _rfu: u8,
 }
 
-#[derive(IntoBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(IntoBytes, Immutable, KnownLayout)]
 #[repr(C)]
 pub struct TxParamSetupAns {
     _padding: [u8; 2],
 }
-#[derive(IntoBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(IntoBytes, Immutable, KnownLayout)]
 #[repr(C)]
 pub struct DIChannelAns {
     status: DIChannelAnsStatus,
     _padding: [u8; 1],
 }
 #[bitfield(u8)]
-#[derive(IntoBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(IntoBytes, Immutable, KnownLayout)]
 pub struct DIChannelAnsStatus {
-    channel_frequency_ok: bool,
-    uplink_frequency_exists: bool,
+    pub channel_frequency_ok: bool,
+    pub uplink_frequency_exists: bool,
     #[bits(6)]
     _rfu: u8,
 }
 
-#[derive(IntoBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(IntoBytes, Immutable, KnownLayout)]
 #[repr(C)]
 pub struct DeviceTimeReq {
     _padding: [u8; 2],
 }
-pub struct UplinkMacCommandEncoder<'a> {
-    cmds: &'a [UplinkMacCommmand],
+
+pub fn encode_maccommands<'a>(
+    cmds: &[UplinkMacCommmand],
+    buf: &'a mut [u8],
+) -> Result<&'a [u8], Error> {
+    let mut pos = 0usize;
+    for cmd in cmds {
+        let len = cmd.len() + 1;
+        buf[pos..pos + len].copy_from_slice(&cmd.as_bytes()[..len]);
+        pos += len;
+    }
+    Ok(&buf[..pos])
 }
-
-impl<'a> UplinkMacCommandEncoder<'a> {
-    pub fn new(cmds: &'a [UplinkMacCommmand]) -> Self {
-        Self { cmds }
+pub fn get_mac_commands_len(cmds: &[UplinkMacCommmand]) -> usize {
+    let mut pos = 0usize;
+    for cmd in cmds {
+        let len = cmd.len() + 1;
+        pos += len;
     }
-
-    pub fn encode<'b>(&self, buf: &'b mut [u8]) -> Result<&'b [u8], Error> {
-        let mut pos = 0usize;
-        for cmd in self.cmds {
-            let len = cmd.len() + 1;
-            buf[pos..pos + len].copy_from_slice(&cmd.as_bytes()[..len]);
-            pos += len;
-        }
-        Ok(&buf[..pos])
-    }
+    pos
 }
 
 #[cfg(test)]
@@ -196,9 +198,8 @@ mod tests {
             UplinkMacCommmand::LinkCheckReq(LinkCheckReq::new()),
             UplinkMacCommmand::LinkADRAns(LinkADRAns::new(LinkAdrAnsStatus::new())),
         ];
-        let encoder = UplinkMacCommandEncoder::new(cmds.as_slice());
         let mut buf = [0u8; 255];
-        let cmd_buf = encoder.encode(&mut buf).unwrap();
+        let cmd_buf = encode_maccommands(cmds.as_slice(), &mut buf).unwrap();
         assert_eq!(cmd_buf, &[0x02, 0x03, 0x00])
     }
 }
