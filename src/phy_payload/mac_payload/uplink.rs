@@ -57,7 +57,7 @@ mod tests {
     use crate::{
         crypto::soft::SoftCrypto,
         mac_command::uplink::{
-            encode_maccommands, LinkADRAns, LinkAdrAnsStatus, LinkCheckReq, UplinkMacCommmand,
+            encode_maccommands, LinkADRAns, LinkAdrAnsStatus, UplinkMacCommmand,
         },
         phy_payload::mac_payload::FHDR,
         types::{AppSKey, DevAddr, NwkSKey},
@@ -110,7 +110,7 @@ mod tests {
     fn encode_uplink_with_fopts() {
         let mut buf = [0u8; 256];
         let cmds = [
-            UplinkMacCommmand::LinkCheckReq(LinkCheckReq::new()),
+            UplinkMacCommmand::LinkCheckReq,
             UplinkMacCommmand::LinkADRAns(LinkADRAns::new(
                 LinkAdrAnsStatus::new()
                     .with_power_ack(true)
@@ -140,7 +140,7 @@ mod tests {
     fn encrypt_uplink() {
         let mut buf = [0u8; 256];
         let cmds = [
-            UplinkMacCommmand::LinkCheckReq(LinkCheckReq::new()),
+            UplinkMacCommmand::LinkCheckReq,
             UplinkMacCommmand::LinkADRAns(LinkADRAns::new(
                 LinkAdrAnsStatus::new()
                     .with_power_ack(true)

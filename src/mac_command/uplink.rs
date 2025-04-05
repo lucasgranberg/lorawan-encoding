@@ -11,16 +11,16 @@ use super::{
 
 #[repr(u8)]
 pub enum UplinkMacCommmand {
-    LinkCheckReq(LinkCheckReq) = LINK_CHECK_CID,
+    LinkCheckReq = LINK_CHECK_CID,
     LinkADRAns(LinkADRAns) = LINK_ADR_CID,
-    DutyCycleAns(DutyCycleAns) = DUTY_CYCLE_CID,
+    DutyCycleAns = DUTY_CYCLE_CID,
     RXParamSetupAns(RXParamSetupAns) = RX_PARAM_SETUP_CID,
     DevStatusAns(DevStatusAns) = DEV_STATUS_CID,
     NewChannelAns(NewChannelAns) = NEW_CHANNEL_CID,
     RXTimingSetupAns(RXTimingSetupAns) = RX_TIMING_SETUP_CID,
-    TxParamSetupAns(TxParamSetupAns) = TX_PARAM_SETUP_CID,
+    TxParamSetupAns = TX_PARAM_SETUP_CID,
     DIChannelAns(DIChannelAns) = DI_CHANNEL_CID,
-    DeviceTimeReq(DeviceTimeReq) = DEVICE_TIME_CID,
+    DeviceTimeReq = DEVICE_TIME_CID,
 }
 #[allow(clippy::len_without_is_empty)]
 impl UplinkMacCommmand {
@@ -30,27 +30,16 @@ impl UplinkMacCommmand {
     }
     pub fn as_bytes(&self) -> &[u8] {
         match self {
-            UplinkMacCommmand::LinkCheckReq(cmd) => cmd.as_bytes(),
+            UplinkMacCommmand::LinkCheckReq => &[],
             UplinkMacCommmand::LinkADRAns(cmd) => cmd.as_bytes(),
-            UplinkMacCommmand::DutyCycleAns(cmd) => cmd.as_bytes(),
+            UplinkMacCommmand::DutyCycleAns => &[],
             UplinkMacCommmand::RXParamSetupAns(cmd) => cmd.as_bytes(),
             UplinkMacCommmand::DevStatusAns(cmd) => cmd.as_bytes(),
             UplinkMacCommmand::NewChannelAns(cmd) => cmd.as_bytes(),
             UplinkMacCommmand::RXTimingSetupAns(cmd) => cmd.as_bytes(),
-            UplinkMacCommmand::TxParamSetupAns(cmd) => cmd.as_bytes(),
+            UplinkMacCommmand::TxParamSetupAns => &[],
             UplinkMacCommmand::DIChannelAns(cmd) => cmd.as_bytes(),
-            UplinkMacCommmand::DeviceTimeReq(cmd) => cmd.as_bytes(),
-        }
-    }
-}
-
-#[derive(Default, IntoBytes, Immutable, KnownLayout)]
-#[repr(C)]
-pub struct LinkCheckReq {}
-impl LinkCheckReq {
-    pub fn new() -> Self {
-        Self {
-            ..Default::default()
+            UplinkMacCommmand::DeviceTimeReq => &[],
         }
     }
 }
@@ -79,9 +68,6 @@ pub struct LinkAdrAnsStatus {
     _rfu: u8,
 }
 
-#[derive(IntoBytes, Immutable, KnownLayout)]
-#[repr(C)]
-pub struct DutyCycleAns {}
 #[derive(IntoBytes, Immutable, KnownLayout)]
 #[repr(C)]
 pub struct RXParamSetupAns {
@@ -133,12 +119,10 @@ pub struct RxTimingsSetting {
 
 #[derive(IntoBytes, Immutable, KnownLayout)]
 #[repr(C)]
-pub struct TxParamSetupAns {}
-#[derive(IntoBytes, Immutable, KnownLayout)]
-#[repr(C)]
 pub struct DIChannelAns {
     status: DIChannelAnsStatus,
 }
+
 #[bitfield(u8)]
 #[derive(IntoBytes, Immutable, KnownLayout)]
 pub struct DIChannelAnsStatus {
@@ -147,10 +131,6 @@ pub struct DIChannelAnsStatus {
     #[bits(6)]
     _rfu: u8,
 }
-
-#[derive(IntoBytes, Immutable, KnownLayout)]
-#[repr(C)]
-pub struct DeviceTimeReq {}
 
 pub fn encode_maccommands<'a>(
     cmds: &[UplinkMacCommmand],
@@ -177,7 +157,7 @@ mod tests {
     #[test]
     fn encode_uplink_cmds() {
         let cmds = [
-            UplinkMacCommmand::LinkCheckReq(LinkCheckReq::new()),
+            UplinkMacCommmand::LinkCheckReq,
             UplinkMacCommmand::LinkADRAns(LinkADRAns::new(LinkAdrAnsStatus::new())),
         ];
         let mut buf = [0u8; 255];
