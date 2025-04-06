@@ -1,0 +1,17 @@
+pub const PACKET_VERSION_CID: u8 = 0x00;
+pub const DUT_RESET_CID: u8 = 0x01;
+pub const DUT_JOIN_CID: u8 = 0x02;
+pub const SWITCH_CLASS_CID: u8 = 0x03;
+pub const ADR_BIT_CHANGE_CID: u8 = 0x04;
+pub const REGIONAL_DUTY_CYCLE_CID: u8 = 0x05;
+pub const TX_PERIODICITY_CHANGE_CID: u8 = 0x06;
+pub const TX_FRAMES_CTRL_CID: u8 = 0x07;
+pub const ECHO_PAYLOAD_CID: u8 = 0x08;
+pub const RX_APP_CNT_CID: u8 = 0x09;
+pub const RX_APP_CNT_RESET_CID: u8 = 0x0A;
+pub const LINK_CHECK_CID: u8 = 0x20;
+pub const DEVICE_TIME_CID: u8 = 0x21;
+pub const PING_SLOT_INFO_CID: u8 = 0x22;
+pub const TX_CW_CID: u8 = 0x7D;
+pub const DUT_FPORT_224_DISABLE_CID: u8 = 0x7E;
+pub const DUT_VERSION_CID: u8 = 0x7F;

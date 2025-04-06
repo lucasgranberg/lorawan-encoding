@@ -9,5 +9,6 @@ const TX_PARAM_SETUP_CID: u8 = 0x09;
 const DI_CHANNEL_CID: u8 = 0x0A;
 const DEVICE_TIME_CID: u8 = 0x0D;
 
+pub mod certification;
 pub mod downlink;
 pub mod uplink;

@@ -26,7 +26,7 @@ pub enum UplinkMacCommmand {
 impl UplinkMacCommmand {
     // https://doc.rust-lang.org/reference/items/enumerations.html#pointer-casting
     fn cid(&self) -> u8 {
-        unsafe { *(self as *const Self as *const u8) }
+        unsafe { *((self as *const Self) as *const u8) }
     }
     pub fn as_bytes(&self) -> &[u8] {
         match self {
@@ -51,10 +51,7 @@ pub struct LinkADRAns {
 }
 impl LinkADRAns {
     pub fn new(status: LinkAdrAnsStatus) -> Self {
-        Self {
-            status,
-            ..Default::default()
-        }
+        Self { status }
     }
 }
 
