@@ -18,7 +18,7 @@ pub enum DownlinkMacCommand {
     NewChannelReq(NewChannelReq) = NEW_CHANNEL_CID,
     RXTimingSetupReq(RXTimingSetupReq) = RX_TIMING_SETUP_CID,
     TxParamSetupReq(TxParamSetupReq) = TX_PARAM_SETUP_CID,
-    DIChannelReq(DIChannelReq) = DI_CHANNEL_CID,
+    DIChannelReq(DlChannelReq) = DI_CHANNEL_CID,
     DeviceTimeAns(DeviceTimeAns) = DEVICE_TIME_CID,
 }
 impl DownlinkMacCommand {
@@ -71,7 +71,7 @@ pub struct Redundancy {
     ch_mask_cntl: u8,
     _rfu: bool,
 }
-#[derive(Clone, Debug, TryFromBytes, Immutable, KnownLayout, Unaligned)]
+#[derive(Clone, Debug, PartialEq, TryFromBytes, Immutable, KnownLayout, Unaligned)]
 #[repr(C)]
 pub struct DutyCycleReq {
     duty_cycle_pl: DutyCyclePl,
@@ -88,8 +88,18 @@ pub struct DutyCyclePl {
 #[derive(Clone, Debug, PartialEq, TryFromBytes, Immutable, KnownLayout, Unaligned)]
 #[repr(C)]
 pub struct RXParamSetupReq {
-    frequency: [u8; 3],
     dl_settings: DlSettings,
+    frequency: Frequency,
+}
+
+#[derive(Clone, Debug, PartialEq, TryFromBytes, Immutable, KnownLayout, Unaligned)]
+#[repr(C)]
+pub struct Frequency([u8; 3]);
+
+impl Frequency {
+    pub fn hz(&self) -> u32 {
+        u32::from_le_bytes([self.0[2], self.0[1], self.0[0], 0]) * 100
+    }
 }
 
 #[bitfield(u8)]
@@ -105,8 +115,8 @@ pub struct DlSettings {
 #[derive(Clone, Debug, PartialEq, TryFromBytes, Immutable, KnownLayout, Unaligned)]
 #[repr(C)]
 pub struct DevStatusReq {
-    radio_status: RadioStatus,
-    battery: u8,
+    pub battery: u8,
+    pub radio_status: RadioStatus,
 }
 #[bitfield(u8)]
 #[derive(PartialEq, TryFromBytes, Immutable, KnownLayout, Unaligned)]
@@ -120,9 +130,9 @@ pub struct RadioStatus {
 #[derive(Clone, Debug, PartialEq, TryFromBytes, Immutable, KnownLayout, Unaligned)]
 #[repr(C)]
 pub struct NewChannelReq {
-    dr_range: DRRange,
-    frequency: [u8; 3],
     ch_index: u8,
+    frequency: Frequency,
+    dr_range: DRRange,
 }
 #[bitfield(u8)]
 #[derive(PartialEq, TryFromBytes, Immutable, KnownLayout, Unaligned)]
@@ -165,16 +175,21 @@ pub struct EirpDwellTime {
 
 #[derive(Clone, Debug, PartialEq, TryFromBytes, Immutable, KnownLayout, Unaligned)]
 #[repr(C)]
-pub struct DIChannelReq {
-    frequency: [u8; 3],
+pub struct DlChannelReq {
     ch_index: u8,
+    frequency: Frequency,
 }
 
 #[derive(Clone, Debug, PartialEq, TryFromBytes, Immutable, KnownLayout, Unaligned)]
 #[repr(C)]
 pub struct DeviceTimeAns {
-    fractions: u8,
     seconds: [u8; 4],
+    fractions: u8,
+}
+impl DeviceTimeAns {
+    pub fn gps_epoch_nano_seconds(&self) -> u64 {
+        (u32::from_be_bytes(self.seconds) as u64 * 1000000000) + (self.fractions as u64 * 3906250)
+    }
 }
 pub struct DownlinkMacCommandDecoder<'a> {
     buf: &'a [u8],
@@ -194,9 +209,12 @@ impl Iterator for DownlinkMacCommandDecoder<'_> {
             let mut tmp = [0u8; size_of::<DownlinkMacCommand>()];
             tmp[..remaining].copy_from_slice(&self.buf[..remaining]);
             match DownlinkMacCommand::try_read_from_bytes(&tmp) {
-                Ok(r) => {
-                    self.buf = &self.buf[r.len() + 1..];
-                    Some(r)
+                Ok(cmd) => {
+                    if self.buf.len() < cmd.len() + 1 {
+                        return None;
+                    }
+                    self.buf = &self.buf[cmd.len() + 1..];
+                    Some(cmd)
                 }
                 Err(_) => {
                     self.buf = &[];
@@ -244,5 +262,113 @@ mod tests {
             assert!(false, "Wrong command type: {:?}", cmds.get(1))
         }
         assert!(matches!(cmds.get(2), None));
+    }
+    #[test]
+    fn decode_duty_cycle_req() {
+        let buf = [0x04, 0x02];
+        let decoder = DownlinkMacCommandDecoder::new(&buf);
+        let cmds: Vec<_> = decoder.collect();
+        assert_eq!(1, cmds.len());
+        let Some(DownlinkMacCommand::DutyCycleReq(cmd)) = cmds.get(0) else {
+            panic!("decode error");
+        };
+        assert_eq!(
+            cmd,
+            &DutyCycleReq {
+                duty_cycle_pl: DutyCyclePl::new().with_max_duty_cycle(2)
+            }
+        )
+    }
+    #[test]
+    fn decode_rx_param_setup_req() {
+        let buf = [0x05, 0x5C, 0x84, 0x76, 0x2A];
+        let decoder = DownlinkMacCommandDecoder::new(&buf);
+        let cmds: Vec<_> = decoder.collect();
+        assert_eq!(1, cmds.len());
+        let Some(DownlinkMacCommand::RXParamSetupReq(cmd)) = cmds.get(0) else {
+            panic!("decode error");
+        };
+        assert_eq!(cmd.frequency.hz(), 868100200);
+        assert_eq!(
+            cmd.dl_settings,
+            DlSettings::new()
+                .with_rx1_dr_offset(5)
+                .with_rx2_data_rate(12)
+        )
+    }
+    #[test]
+    fn decode_dev_status_req() {
+        let buf = [0x06, 200, 5];
+        let decoder = DownlinkMacCommandDecoder::new(&buf);
+        let cmds: Vec<_> = decoder.collect();
+        assert_eq!(1, cmds.len());
+        let Some(DownlinkMacCommand::DevStatusReq(cmd)) = cmds.get(0) else {
+            panic!("decode error");
+        };
+        assert_eq!(cmd.battery, 200);
+        assert_eq!(cmd.radio_status, RadioStatus::new().with_snr(5));
+    }
+    #[test]
+    fn decode_new_channel_req() {
+        let buf = [0x07, 0x01, 0x84, 0x76, 0x2A, 0xA1];
+        let decoder = DownlinkMacCommandDecoder::new(&buf);
+        let cmds: Vec<_> = decoder.collect();
+        assert_eq!(1, cmds.len());
+        let Some(DownlinkMacCommand::NewChannelReq(cmd)) = cmds.get(0) else {
+            panic!("decode error");
+        };
+        assert_eq!(cmd.ch_index, 1);
+        assert_eq!(cmd.frequency.hz(), 868100200);
+        assert_eq!(
+            cmd.dr_range,
+            DRRange::new().with_max_dr(0x0A).with_min_dr(0x01)
+        );
+    }
+    #[test]
+    fn decode_rx_timing_setup_req() {
+        let buf = [0x08, 0x03];
+        let decoder = DownlinkMacCommandDecoder::new(&buf);
+        let cmds: Vec<_> = decoder.collect();
+        assert_eq!(1, cmds.len());
+        let Some(DownlinkMacCommand::RXTimingSetupReq(cmd)) = cmds.get(0) else {
+            panic!("decode error");
+        };
+        assert_eq!(cmd.rx_timings_settings.del(), 3);
+    }
+    #[test]
+    fn decode_tx_param_setup_req() {
+        let buf = [0x09, 0x1C];
+        let decoder = DownlinkMacCommandDecoder::new(&buf);
+        let cmds: Vec<_> = decoder.collect();
+        assert_eq!(1, cmds.len());
+        let Some(DownlinkMacCommand::TxParamSetupReq(cmd)) = cmds.get(0) else {
+            panic!("decode error");
+        };
+        assert_eq!(cmd.eirp_dwell_time.max_eirp(), 12);
+        assert_eq!(cmd.eirp_dwell_time.uplink_dwell_time(), true);
+        assert_eq!(cmd.eirp_dwell_time.downlink_dwell_time(), false);
+    }
+    #[test]
+    fn decode_dl_channel_req() {
+        let buf = [0x0A, 0x08, 0x84, 0x76, 0x2A];
+        let decoder = DownlinkMacCommandDecoder::new(&buf);
+        let cmds: Vec<_> = decoder.collect();
+        assert_eq!(1, cmds.len());
+        let Some(DownlinkMacCommand::DIChannelReq(cmd)) = cmds.get(0) else {
+            panic!("decode error");
+        };
+        assert_eq!(cmd.ch_index, 8);
+        assert_eq!(cmd.frequency.hz(), 868100200);
+    }
+    #[test]
+    fn decode_device_time_ans() {
+        let buf = [0x0D, 0x1, 0x2, 0x3, 0x4, 0x5];
+        let decoder = DownlinkMacCommandDecoder::new(&buf);
+        let cmds: Vec<_> = decoder.collect();
+        assert_eq!(1, cmds.len());
+        let Some(DownlinkMacCommand::DeviceTimeAns(cmd)) = cmds.get(0) else {
+            panic!("decode error");
+        };
+        assert_eq!(cmd.gps_epoch_nano_seconds(), 16909060019531250);
     }
 }
