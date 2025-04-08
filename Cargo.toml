@@ -12,6 +12,7 @@ cmac = { version = "0.7", optional = true }
 [features]
 default = ["soft-crypto"]
 soft-crypto = ["dep:aes", "dep:cmac"]
+certification = []
 
 [dev-dependencies]
 aes = { version = "0.8" }
