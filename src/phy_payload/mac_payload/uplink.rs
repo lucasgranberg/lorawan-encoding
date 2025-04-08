@@ -111,11 +111,11 @@ mod tests {
         let mut buf = [0u8; 256];
         let cmds = [
             UplinkMacCommmand::LinkCheckReq,
-            UplinkMacCommmand::LinkADRAns(LinkADRAns::new(
-                LinkAdrAnsStatus::new()
+            UplinkMacCommmand::LinkADRAns(LinkADRAns {
+                status: LinkAdrAnsStatus::new()
                     .with_power_ack(true)
                     .with_channel_mask_ack(true),
-            )),
+            }),
         ];
         let mut f_opts_buf = [0u8; 15];
         let fhdr = FHDR::new(
@@ -141,11 +141,11 @@ mod tests {
         let mut buf = [0u8; 256];
         let cmds = [
             UplinkMacCommmand::LinkCheckReq,
-            UplinkMacCommmand::LinkADRAns(LinkADRAns::new(
-                LinkAdrAnsStatus::new()
+            UplinkMacCommmand::LinkADRAns(LinkADRAns {
+                status: LinkAdrAnsStatus::new()
                     .with_power_ack(true)
                     .with_channel_mask_ack(true),
-            )),
+            }),
         ];
         let fhdr = FHDR::new(
             DevAddr::read_from_bytes(&[4, 3, 2, 1]).unwrap(),
